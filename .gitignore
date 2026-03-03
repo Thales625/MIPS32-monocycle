@@ -5,7 +5,6 @@ assembler/data.bin
 
 # sim
 sim/__pycache__/
-sim/sim_build/
-sim/modelsim.ini
+sim/top/
 sim/results.xml
 sim/transcript

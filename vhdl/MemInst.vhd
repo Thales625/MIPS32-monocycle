@@ -6,7 +6,7 @@ use std.textio.all;
 entity Memoria_Instrucoes is
     generic (
         ADDR_WIDTH : integer := 8;
-        INIT_FILE  : string := "../compiler/code.bin"
+        INIT_FILE  : string := "../assembler/code.bin"
     );
     port (
         endereco  : in  std_logic_vector(31 downto 0);

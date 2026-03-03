@@ -6,7 +6,7 @@ use std.textio.all;
 entity Memoria_Dados is
     generic (
         ADDR_WIDTH : integer := 8;
-        INIT_FILE  : string := "../compiler/data.bin"
+        INIT_FILE  : string := "../assembler/data.bin"
     );
     port (
         clk      : in  std_logic;
