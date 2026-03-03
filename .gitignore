@@ -1,7 +1,7 @@
-# compiler
-compiler/code.asm
-compiler/code.bin
-compiler/data.bin
+# assembler
+assembler/code.asm
+assembler/code.bin
+assembler/data.bin
 
 # sim
 sim/__pycache__/
