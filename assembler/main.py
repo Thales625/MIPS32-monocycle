@@ -35,25 +35,48 @@ class InstrFormat(Enum):
 
     M = "MEM-TYPE"
 
+class Operand(Enum):
+    A = "A"
+    B = "B"
+    C = "C"
+    I = "Immediate"
+    J = "Address"
+
 @dataclass
 class InstructionDef:
     opcode: str
     format: InstrFormat
+    operand_order: tuple = ()
     funct: str = ""
 
 ISA = {
-    "add":  InstructionDef(opcode="000000", format=InstrFormat.R, funct="000010"),
-    "sub":  InstructionDef(opcode="000000", format=InstrFormat.R, funct="000011"),
-    "sll":  InstructionDef(opcode="000000", format=InstrFormat.R, funct="001010"),
-    "srl":  InstructionDef(opcode="000000", format=InstrFormat.R, funct="001011"),
-    "mul":  InstructionDef(opcode="000000", format=InstrFormat.R, funct="001100"),
-    "addi": InstructionDef(opcode="000100", format=InstrFormat.I),
-    "subi": InstructionDef(opcode="000101", format=InstrFormat.I),
-    "ldi":  InstructionDef(opcode="000110", format=InstrFormat.I),
-    "beq":  InstructionDef(opcode="000111", format=InstrFormat.I),
-    "lw":   InstructionDef(opcode="010000", format=InstrFormat.M),
-    "sw":   InstructionDef(opcode="010001", format=InstrFormat.M),
-    "j":    InstructionDef(opcode="010010", format=InstrFormat.J),
+    # R-Type
+    "add":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A, Operand.B), funct="000010"),
+    "sub":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A, Operand.B), funct="000011"),
+    "inc":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A),            funct="000011"),
+    "dec":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A),            funct="000011"),
+    "not":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A),            funct="000011"),
+    "and":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A, Operand.B), funct="000111"),
+    "or":   InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A, Operand.B), funct="001000"),
+    "xor":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A, Operand.B), funct="001000"),
+    "sll":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.B),            funct="001010"),
+    "srl":  InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.B),            funct="001011"),
+    "mult": InstructionDef(opcode="000000", format=InstrFormat.R, operand_order=(Operand.C, Operand.A, Operand.B), funct="001100"),
+
+    # I-Type
+    "addi": InstructionDef(opcode="000100", format=InstrFormat.I, operand_order=(Operand.B, Operand.A, Operand.I)),
+    "andi": InstructionDef(opcode="000101", format=InstrFormat.I, operand_order=(Operand.B, Operand.A, Operand.I)),
+    "ori":  InstructionDef(opcode="000110", format=InstrFormat.I, operand_order=(Operand.B, Operand.A, Operand.I)),
+    "ldi":  InstructionDef(opcode="000111", format=InstrFormat.I, operand_order=(Operand.B, Operand.I)),
+    "beq":  InstructionDef(opcode="001000", format=InstrFormat.I, operand_order=(Operand.B, Operand.A, Operand.I)),
+    "bne":  InstructionDef(opcode="001001", format=InstrFormat.I, operand_order=(Operand.B, Operand.A, Operand.I)),
+
+    # M-Type
+    "lw":   InstructionDef(opcode="010000", format=InstrFormat.M, operand_order=(Operand.B, Operand.I, Operand.A)),
+    "sw":   InstructionDef(opcode="010001", format=InstrFormat.M, operand_order=(Operand.B, Operand.I, Operand.A)),
+
+    # J-Type
+    "j":    InstructionDef(opcode="010010", format=InstrFormat.J, operand_order=(Operand.J)),
 }
 
 class AssemblerState(Enum):
@@ -202,57 +225,84 @@ class Assembler:
 
     @classmethod
     def _encode_r_type(cls, instr:InstructionDef, args:list) -> str:
-        if len(args) == 3: # ex: add $c, $a, $b
-            c, a, b = args
-        elif len(args) == 2: # ex: sll $c, $b
-            c, b = args
-            a = 0
-        else:
+        if len(args) != len(instr.operand_order):
             raise ValueError("Invalid number of args for R-Type.")
 
+        # default fields
+        fields = {
+            Operand.A: 0,
+            Operand.B: 0,
+            Operand.C: 0
+        }
+
+        for field, value in zip(instr.operand_order, args):
+            fields[field] = value
+
         return (instr.opcode + 
-                to_bin(a, 5) + 
-                to_bin(b, 5) + 
-                to_bin(c, 5) + 
+                to_bin(fields[Operand.A], 5) + 
+                to_bin(fields[Operand.B], 5) + 
+                to_bin(fields[Operand.C], 5) + 
                 "00000" + 
                 instr.funct)
 
     @classmethod
     def _encode_i_type(cls, instr:InstructionDef, args:list, line_index:int) -> str:
-        if len(args) == 3:
-            a, b, imm = args
-
-            if instr == ISA["beq"]: # BEQ | relative jump
-                imm = imm - line_index - 1
-        elif len(args) == 2: # ldi
-            b, imm = args
-            a = 0
-        else:
+        if len(args) != len(instr.operand_order):
             raise ValueError("Invalid number of args for I-Type.")
 
+        # default fields
+        fields = {
+            Operand.A: 0,
+            Operand.B: 0,
+            Operand.I: 0
+        }
+
+        for field, value in zip(instr.operand_order, args):
+            fields[field] = value
+
+        if instr == ISA["beq"] or instr == ISA["bne"]: # relative jump
+            fields[Operand.I] = fields[Operand.I] - line_index - 1
+
         return (instr.opcode + 
-                to_bin(a, 5) + 
-                to_bin(b, 5) + 
-                to_bin(imm, 16, signed=True))
+                to_bin(fields[Operand.A], 5) + 
+                to_bin(fields[Operand.B], 5) + 
+                to_bin(fields[Operand.I], 16, signed=True))
 
     @classmethod
     def _encode_m_type(cls, instr:InstructionDef, args:list) -> str:
-        if len(args) != 3: raise ValueError("Invalid format for memory-type instruction.")
-        
-        b, imm, a = args
+        if len(args) != len(instr.operand_order):
+            raise ValueError("Invalid number of args for M-Type.")
+
+        # default fields
+        fields = {
+            Operand.A: 0,
+            Operand.B: 0,
+            Operand.I: 0
+        }
+
+        for field, value in zip(instr.operand_order, args):
+            fields[field] = value
         
         return (instr.opcode + 
-                to_bin(a, 5) + 
-                to_bin(b, 5) + 
-                to_bin(imm, 16, signed=True))
+                to_bin(fields[Operand.A], 5) + 
+                to_bin(fields[Operand.B], 5) + 
+                to_bin(fields[Operand.I], 16, signed=True))
 
     @classmethod
     def _encode_j_type(cls, instr:InstructionDef, args:list) -> str:
-        if len(args) != 1: raise ValueError("J-Type requires 1 argument (address).")
+        if len(args) != len(instr.operand_order):
+            raise ValueError("Invalid number of args for J-Type.")
 
-        address = args[0]
-        return instr.opcode + to_bin(address, 26)
+        # default fields
+        fields = {
+            Operand.J: 0
+        }
 
+        for field, value in zip(instr.operand_order, args):
+            fields[field] = value
+
+        return (instr.opcode +
+                to_bin(fields[Operand.J], 26))
 
 if __name__ == "__main__":
     with open("code.asm", 'r') as f:

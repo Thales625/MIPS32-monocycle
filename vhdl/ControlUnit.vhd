@@ -5,7 +5,7 @@ entity ControlUnit is
     port (
         opcode : in std_logic_vector(5 downto 0);
         
-        jump, branch : out std_logic;
+        jump, branch_eq, branch_ne : out std_logic;
         mem_read, mem_write : out std_logic;
         reg_dst, reg_write : out std_logic;
         mem_to_reg : out std_logic;
@@ -20,7 +20,8 @@ begin
     begin
         -- default values
         jump       <= '0';
-        branch     <= '0';
+        branch_eq  <= '0';
+        branch_ne  <= '0';
         mem_read   <= '0';
         mem_write  <= '0';
         reg_write  <= '0';
@@ -41,18 +42,27 @@ begin
                 ula_src   <= '1';
                 ula_op    <= "000010";
                 
-            when "000101" => -- SUBI
+            when "000101" => -- ANDI
                 reg_write <= '1';
                 ula_src   <= '1';
-                ula_op    <= "000011";
+                ula_op    <= "000111";
+                
+            when "000110" => -- ORI
+                reg_write <= '1';
+                ula_src   <= '1';
+                ula_op    <= "001000";
             
-            when "000110" => -- LDI
+            when "000111" => -- LDI
                 reg_write <= '1';
                 ula_src   <= '1';
                 ula_op    <= "000001";
 
-            when "000111" => -- BEQ
-                branch <= '1';
+            when "001000" => -- BEQ
+                branch_eq <= '1';
+                ula_op <= "000011";
+
+            when "001001" => -- BNE
+                branch_ne <= '1';
                 ula_op <= "000011";
             
             when "010000" => -- LW
