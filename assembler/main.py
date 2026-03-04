@@ -77,6 +77,7 @@ class Assembler:
             i+=1
             line = line.replace("\n", '') # solve break line
             line = line.split('#')[0].strip() # solve comments
+            line = line.replace(',', ' ')
 
             # ignore empty lines
             if not line: continue
@@ -113,7 +114,7 @@ class Assembler:
                         print(TermFormat.YELLOW + f"Label '{label_split[0]}' already defined in line {Assembler.sym_table[label_split[0]]}." + TermFormat.END)
 
                 data_info = label_split[-1].split()
-                if len(data_info) == 2:
+                if len(data_info) > 1:
                     if data_info[0].startswith(".space"):
                         for _ in range(int(data_info[1], 0)):
                             data_bin.append(to_bin(0, 32))
@@ -121,8 +122,9 @@ class Assembler:
                         continue
 
                     if data_info[0].startswith(".word"):
-                        data_bin.append(to_bin(int(data_info[1], 0), 32))
-                        data_address += 4
+                        for v in data_info[1:]:
+                            data_bin.append(to_bin(int(v, 0), 32))
+                            data_address += 4
                         continue
                 else:
                     raise ValueError(f"Invalid format in data section line {i}")
