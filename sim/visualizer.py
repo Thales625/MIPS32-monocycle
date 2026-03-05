@@ -37,7 +37,7 @@ class Window:
         cls.dut = dut
 
         dpg.create_context()
-        dpg.create_viewport(title='MIPS32 - Monitor', width=900, height=660)
+        dpg.create_viewport(title="MIPS Monitor", width=900, height=660)
         dpg.setup_dearpygui()
 
         # control panel
@@ -123,7 +123,13 @@ class Window:
         cls.reset_requested = True
         cls.is_running = False
 
-        # TODO: clear reg file and memory
+        # clear reg file
+        for i in range(32):
+            cls.dut.RF.s_Reg[i].value = 0
+
+        # clear memory
+        for i in range(len(cls.dut.MEM_DATA.ram)):
+            cls.dut.MEM_DATA.ram[i].value = 0
 
     @classmethod
     def update_reg_file(cls):
