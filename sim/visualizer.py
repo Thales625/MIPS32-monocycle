@@ -26,6 +26,13 @@ class Window:
     # memory dump
     MDMP_size = 16
 
+    # keyboard
+    KEY_addr = 256
+    KEY_map = {
+        dpg.mvKey_W: -1,
+        dpg.mvKey_S: 1,
+    }
+
     # log
     log_messages = []
 
@@ -97,6 +104,13 @@ class Window:
 
         # show window
         dpg.show_viewport()
+
+    @classmethod
+    def read_keyboard(cls):
+        for key, value in cls.KEY_map.items():
+            if dpg.is_key_down(key):
+                cls.dut.MEM_DATA.ram[cls.KEY_addr].value = value
+                return
 
     @classmethod
     def log(cls, message:str):
@@ -173,6 +187,10 @@ class Window:
 
     @classmethod
     def update(cls, cycle):
+        # read keyboard
+        cls.read_keyboard()
+
+        # update info
         pc_val = read_signal(cls.dut.PC.Q)
         inst_val = read_signal(cls.dut.Instruction)
         dpg.set_value("cpu_info", f"Cycle: {cycle} | PC: {format_hex(pc_val)} | Instruction: {format_bin(inst_val)}")
