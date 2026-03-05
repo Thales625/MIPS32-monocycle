@@ -15,6 +15,7 @@ def read_signal(signal, signed=False):
 class Window:
     is_running = False
     step_requested = False
+    reset_requested = False
 
     # bitmap display
     BM_border = True
@@ -44,6 +45,7 @@ class Window:
             with dpg.group(horizontal=True):
                 dpg.add_button(label="Play", tag="btn_play", width=80, height=30, callback=cls.btn_play_pause)
                 dpg.add_button(label="Step", width=80, height=30, callback=cls.btn_step)
+                dpg.add_button(label="Reset", width=80, height=30, callback=cls.btn_reset)
 
             dpg.add_spacer(height=10)
             dpg.add_text("Cycle: 0 | PC: 0x00000000 | Instruction: 0b00000000000000000000000000000000", tag="cpu_info", color=[0, 255, 0])
@@ -114,6 +116,14 @@ class Window:
     @classmethod
     def btn_step(cls):
         cls.step_requested = True
+        cls.is_running = False
+
+    @classmethod
+    def btn_reset(cls):
+        cls.reset_requested = True
+        cls.is_running = False
+
+        # TODO: clear reg file and memory
 
     @classmethod
     def update_reg_file(cls):
